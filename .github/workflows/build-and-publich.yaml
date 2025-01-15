@@ -32,5 +32,5 @@ jobs:
         uses: slackapi/slack-github-action@v1.19.0
         with:
           status: ${{ job.status }}
-          channel-id: C0894818ND7
+          channel-id: C088BKGQ92T
           slack-token: ${{ secrets.SLACK_BOT_TOKEN }}

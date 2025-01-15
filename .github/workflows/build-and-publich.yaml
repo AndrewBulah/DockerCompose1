@@ -11,7 +11,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -33,7 +33,7 @@ jobs:
         with:
           payload: |
             {
-              "text": "Docker image *andrewfreak/my_app:${{ github.sha }}* is successfully pushed!",
+              "text": "Docker image *<https://hub.docker.com/r/andrewfreak/my_app/tags|andrewfreak/my_app:${{ github.sha }}>* is successfully pushed!",
               "channel": "C088BKGQ92T"
             }
         env:
@@ -49,7 +49,7 @@ jobs:
         with:
           payload: |
             {
-              "text": "Failed to build or push Docker image.",
+              "text": "Failed to build or push Docker image *<https://hub.docker.com/r/andrewfreak/my_app/tags|andrewfreak/my_app>*.",
               "channel": "C088BKGQ92T"
             }
         env:

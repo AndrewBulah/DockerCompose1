@@ -25,7 +25,7 @@ jobs:
       - name: Build and push
         id: docker_build
         run: |
-          docker build -t andrewfreak/my_app:${{ github.sha }} -f second/Dockerfile
+          docker build -t andrewfreak/my_app:${{ github.sha }} -f second/Dockerfile second/
           docker push andrewfreak/my_app:${{ github.sha }}
 
       - name: Notify Slack

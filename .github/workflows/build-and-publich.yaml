@@ -1,4 +1,4 @@
-name: Build and Publish Docker Image
+name: Build and Push Docker Image
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -22,15 +23,34 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push
-        uses: docker/build-push-action@v2
-        with:
-          context: ./second
-          push: true
-          tags: andrewfreak/my_app:latest
+        id: docker_build
+        run: |
+          docker build -t andrewfreak/my_app:${{ github.sha }} .
+          docker push andrewfreak/my_app:${{ github.sha }}
 
       - name: Notify Slack
-        uses: slackapi/slack-github-action@v1.19.0
+        uses: slackapi/slack-github-action@v1
         with:
-          status: ${{ job.status }}
-          channel-id: C088BKGQ92T
-          slack-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            {
+              "text": "Docker image *andrewfreak/my_app:${{ github.sha }}* is successfully pushed!",
+              "channel": "C088BKGQ92T"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  notify_failure:
+    needs: build
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "Failed to build or push Docker image.",
+              "channel": "C088BKGQ92T"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

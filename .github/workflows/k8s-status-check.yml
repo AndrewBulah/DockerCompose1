@@ -3,7 +3,7 @@ name: Kubernetes Status Check
 on:
   push:
     branches:
-      - main 
+      - main  
 
 jobs:
   check-status:
@@ -11,7 +11,9 @@ jobs:
 
     steps:
       - name: Set up Kubeconfig
-        run: echo "${{ secrets.KUBE_CONFIG_K8S }}" > ~/.kube/config
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG_K8S }}" > ~/.kube/config
 
       - name: Check Kubernetes status
         run: |

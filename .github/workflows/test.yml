@@ -11,15 +11,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up kubectl for k8s
-        if: github.event.inputs.cluster == 'k8s'  # Убедитесь в правильности условия
-        env:
-          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG_K8S }}
+      - name: Set up kubectl for k3s
         run: |
-          echo "${KUBE_CONFIG}" > kubeconfig
+          echo "${{ secrets.KUBE_CONFIG_K3S }}" > kubeconfig
           export KUBECONFIG=$(pwd)/kubeconfig
-          
-          - name: Check pod status
+
+      - name: Check pod status
         id: check_pods
         run: |
           pods=$(kubectl get pods --all-namespaces -o jsonpath='{.items[*].status.phase}')

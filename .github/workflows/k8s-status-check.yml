@@ -1,0 +1,26 @@
+name: Kubernetes Status Check
+
+on:
+  push:
+    branches:
+      - main 
+
+jobs:
+  check-status:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Kubeconfig
+        run: echo "${{ secrets.KUBE_CONFIG_K8S }}" > ~/.kube/config
+
+      - name: Check Kubernetes status
+        run: |
+          kubectl get pods --all-namespaces --field-selector=status.phase!=Running > status.txt || true
+          if [ -s status.txt ]; then
+            echo "Pods not running. Sending notification to Slack."
+            curl -X POST -H 'Content-type: application/json' --data '{"text":"Kubernetes issues detected:\n$(cat status.txt)"}' $SLACK_WEBHOOK_URL
+          else
+            echo "All pods are running."
+          fi
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

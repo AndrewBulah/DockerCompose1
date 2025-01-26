@@ -20,8 +20,11 @@ jobs:
           kubectl get pods --all-namespaces --field-selector=status.phase!=Running > status.txt || true
           if [ -s status.txt ]; then
             echo "Pods not running. Sending notification to Slack."
-            message=$(cat status.txt)
-            curl -X POST -H 'Content-type: application/json' --data '{"text":"Kubernetes issues detected:\n'"$message"'"}' $SLACK_WEBHOOK_URL
+            message=$(cat status.txt | awk '{print $0}' | jq -R . | jq -s .)  # Преобразуем вывод в JSON
+            payload="{\"text\":\"Kubernetes issues detected:\n${message}\"}"  # Формируем payload
+            echo "Payload to Slack: $payload"  # Логируем payload для отладки
+            response=$(curl -X POST -H 'Content-type: application/json' --data "$payload" $SLACK_WEBHOOK_URL)
+            echo "Slack response: $response"  # Логируем ответ от Slack
           else
             echo "All pods are running."
           fi

@@ -1,0 +1,27 @@
+name: Kubernetes Cluster Monitoring
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Check pod status
+        run: |
+          kubectl get pods --all-namespaces -o json | jq '.items[] | select(.status.phase != "Running")' > failed_pods.json
+          if [ -s failed_pods.json ]; then
+            echo "Failed pods detected!"
+            exit 1
+          fi
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          slack-message: "Ошибка в кластере Kubernetes: обнаружены неработающие модули."
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -1,5 +1,15 @@
 name: Kubernetes Cluster Monitoring
 
+# Триггеры событий
+on:
+  workflow_dispatch:  # Ручной запуск через интерфейс GitHub Actions
+  push:
+    branches:
+      - main  # Запуск при пуше в ветку main
+  pull_request:
+    branches:
+      - main  # Запуск при создании пул-реквеста в ветку main
+
 jobs:
   monitor:
     runs-on: ubuntu-latest

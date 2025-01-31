@@ -1,32 +1,37 @@
-name: Kubernetes Status Check
-
-on:
-  push:
-    branches:
-      - main  
+name: Kubernetes Cluster Monitoring
 
 jobs:
-  check-status:
+  monitor:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Set up Kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG_K8S }}" > ~/.kube/config
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Check Kubernetes status
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Check pod status
+        id: pod-status
         run: |
-          kubectl get pods --all-namespaces --field-selector=status.phase!=Running > status.txt || true
-          if [ -s status.txt ]; then
-            echo "Pods not running. Sending notification to Slack."
-            message=$(cat status.txt | awk '{print $0}' | jq -R . | jq -s .)  # Преобразуем вывод в JSON
-            payload="{\"text\":\"Kubernetes issues detected:\n${message}\"}"  # Формируем payload
-            echo "Payload to Slack: $payload"  # Логируем payload для отладки
-            response=$(curl -X POST -H 'Content-type: application/json' --data "$payload" $SLACK_WEBHOOK_URL)
-            echo "Slack response: $response"  # Логируем ответ от Slack
+          # Получаем список всех подов и фильтруем те, которые не в состоянии "Running"
+          FAILED_PODS=$(kubectl get pods --all-namespaces --field-selector=status.phase!=Running -o json)
+          echo "Failed pods:"
+          echo "$FAILED_PODS"
+
+          # Если есть неработающие поды, завершаем шаг с ошибкой
+          if [ -n "$FAILED_PODS" ]; then
+            echo "::set-output name=has_failed_pods::true"
+            echo "Обнаружены неработающие модули!"
+            exit 1
           else
-            echo "All pods are running."
+            echo "::set-output name=has_failed_pods::false"
+            echo "Все модули работают нормально."
           fi
+
+      - name: Notify Slack on failure
+        if: steps.pod-status.outputs.has_failed_pods == 'true'
+        uses: slackapi/slack-github-action@v1
+        with:
+          slack-message: "Ошибка в кластере Kubernetes: обнаружены неработающие модули."
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -1,25 +1,51 @@
 name: Kubernetes Cluster Monitoring
 
+# Триггеры событий
+on:
+  workflow_dispatch:  # Ручной запуск через интерфейс GitHub Actions
+  push:
+    branches:
+      - main  # Запуск при пуше в ветку main
+  pull_request:
+    branches:
+      - main  # Запуск при создании пул-реквеста в ветку main
+
 jobs:
   monitor:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
 
       - name: Check pod status
+        id: pod-status
         run: |
-          kubectl get pods --all-namespaces -o json | jq '.items[] | select(.status.phase != "Running")' > failed_pods.json
-          if [ -s failed_pods.json ]; then
-            echo "Failed pods detected!"
+          # Получаем список всех подов и фильтруем те, которые не в состоянии "Running"
+          FAILED_PODS=$(kubectl get pods --all-namespaces --field-selector=status.phase!=Running -o json)
+          echo "Failed pods:"
+          echo "$FAILED_PODS"
+
+          # Если есть неработающие поды, завершаем шаг с ошибкой
+          if [ -n "$FAILED_PODS" ]; then
+            echo "::set-output name=has_failed_pods::true"
+            echo "Обнаружены неработающие модули!"
             exit 1
+          else
+            echo "::set-output name=has_failed_pods::false"
+            echo "Все модули работают нормально."
           fi
 
       - name: Notify Slack on failure
-        if: failure()
+        if: steps.pod-status.outputs.has_failed_pods == 'true'
         uses: slackapi/slack-github-action@v1
         with:
           slack-message: "Ошибка в кластере Kubernetes: обнаружены неработающие модули."
